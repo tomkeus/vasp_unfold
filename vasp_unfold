@@ -1,0 +1,511 @@
+#! /usr/bin/env python
+
+
+# vasp_unfold
+# 
+# Author: Tomic Milan
+#
+# vasp_unfold is a code whose purpose is to perform the unfolding
+# of band structures calculated with VASP. It is based on the method
+# described in (arXiv:1408.2258). If this code have been used to 
+# obtain the data in your publication please cite the given reference.
+#
+# This code is provided as is. There is no guarantee that it will work.
+# However, if you encounter errors or unexpected behavor, please report
+# it to tomic@itp.uni-frankfurt.de and I will try to improve it.
+
+
+import numpy as np
+import argparse
+import sys
+
+
+class Getlines(file):
+    '''Small wrapper of the Python's built-int file
+    class. It's purpose is to skip empty lines
+    while reading the file'''
+    
+    def __init__(self, fname):
+        '''Constructor opens the file in the read mode'''
+        super(Getlines, self).__init__(fname, 'r')
+    
+    def get_next(self):
+        '''Advance to the next non-empty line and return
+        it, while stripping leading and trailing white-
+        spaces and the newline'''
+        line = self.readline().strip()
+        
+        while len(line) == 0:
+            line = self.readline().strip()
+        
+        return line.strip()
+        
+        
+def post_error(error_info):
+    sys.stderr.write('\nError: '+error_info+'\n\n')
+    
+    exit()
+    
+    
+def translation(tstring):
+    try:        
+        tstring = tstring.replace('0', ' 1/1')
+
+        return np.array([int(s.split('/')[1]) for s in tstring.split(',')])
+    except:
+        post_error('Unable to parse string: "{0}". Check help for valid '
+                   'translation generator specification'.format(tstring))
+    
+    
+def gcd(a, b):
+    '''Return greatest common divisor using Euclid's Algorithm.'''
+    while b:      
+        a, b = b, a % b
+    return a
+
+
+def lcm(a, b):
+    '''Return lowest common multiple.'''
+    return a * b // gcd(a, b)
+
+
+def lcmm(*args):
+    '''Return lcm of args.'''   
+    return reduce(lcm, args)
+    
+    
+def parse_poscar(filename):
+    try:
+        gl = Getlines(filename)
+    except:
+        post_error('Unable to open "{0}" for reading.'.format(filename))
+    
+    # Skip the comment line
+    gl.get_next()
+    
+    # Read the scaling factor
+    f = float(gl.get_next())
+    
+    # Read the unit cell vectors
+    cell = np.zeros((3, 3), float)
+    
+    cell[0] = f*np.array(gl.get_next().split(), float)
+    cell[1] = f*np.array(gl.get_next().split(), float)
+    cell[2] = f*np.array(gl.get_next().split(), float)
+    
+    # Read the chemical symbols
+    syms = gl.get_next().split()
+    
+    # Read the atom counts
+    counts = np.array(gl.get_next().split(), int)
+    
+    # Get the number of atoms
+    natoms = np.sum(counts)
+    
+    # Rearrange into the long list of chemical symbols
+    symbols = []
+        
+    for s, c in zip(syms, counts):
+        symbols += [s]*c
+    
+    # Cartesian or fractional coordinates?
+    ctype = gl.get_next()[0].lower()
+    
+    if ctype == 'c':
+        mult = np.linalg.inv(cell)
+    elif ctype == 'd':
+        mult = np.eye(3)
+    else:
+        post_error('"{0}" is unknown POSCAR option'.format(plines[7].strip()))
+    
+    # Allocate storage for positions
+    spos = np.zeros((len(symbols), 3))
+    
+    # Read the positions
+    for i in xrange(len(symbols)):
+        spos[i] = np.array(gl.get_next().split()[:3], float)
+    
+    return cell, spos
+    
+
+def build_operators(spos, trans, eps=1e-6):
+    '''Given a list for fractional positions, and a list of
+    fractional translations, produce a set of matrices, 
+    describing how fractional translations permute atomic
+    positions within the unit cell. Two fractional positions
+    si and sj are considered to be identical when |si-sj|<eps.
+    '''
+    ntrans = len(trans)
+    natoms = len(spos)
+    
+    ops = np.zeros((ntrans, natoms, natoms), int)
+    
+    for i, ti in enumerate(trans):
+        for j, sj in enumerate(spos):
+            for k, sk in enumerate(spos):
+                # If displacement between two atomic positions
+                # differs from the fractional translations by
+                # by a lattice translation+-eps we consider the
+                # that two atomic positions to be map onto each
+                # other by the fractional translation
+                disp = sk-sj-ti
+                ops[i, j, k] = np.linalg.norm(disp-np.rint(disp)) < eps
+
+    # Every row and every column of every operator must
+    # contain exactly one unity, otherwise translations
+    # are not maping atoms one-to-one.
+    if np.any(np.sum(ops, axis=1) != 1) or np.any(np.sum(ops, axis=2) != 1):
+        post_error('Translations are not one-to-one. '
+            'Try changing the matching tolerance, or try using '
+            'the POSCAR file with more regular positions.')
+
+    return ops
+    
+    
+def build_translations(tgens):
+    '''Build a list of translations and irreps from at most 
+    three linearly independent generators specified in the 
+    form [nx,ny,nz], representing translation [1/nx,1/ny,1/nz].
+    '''
+    if len(tgens) > 3:
+        post_error('There can be at most three generators '
+            'of fractional translations.')
+    
+    # Check if generators are linearly independent
+    if len(tgens) == 2 and np.all(np.cross(tgens[0], tgens[1]) == 0):
+        post_error('Generators are not linearly independant.')
+    elif len(tgens) == 3 and np.linalg.det(tgens) == 0:
+        post_error('Generators are not linearly independant.')
+        
+    # Expand the generator list to have a 3x3 matrix
+    tgens = np.append(tgens, np.ones((3-len(tgens), 3)), axis=0)
+
+    # Get the order of every generator
+    order = np.array([lcmm(*g) for g in tgens], int)
+
+    # Get the corresponding roots of unity which will be
+    # used to construct irreps
+    deltag = np.exp(-2*np.pi*1j/order)
+    
+    # Calculate translation vectors
+    tgens = (1.0/tgens)%1
+    
+    # Total number of translations
+    ntrans = np.prod(order)
+    
+    # Storage for translations
+    trans = np.zeros((ntrans, 3), float)
+    
+    # Calculate irreps of every generator
+    irrepg = np.zeros((ntrans, 3), complex)
+    
+    # Loop over all possible products of powers of generators
+    # and store the irreps
+    for i in xrange(order[0]):
+        for j in xrange(order[1]):
+            for k in xrange(order[2]):
+                ii = i*order[1]*order[2]+j*order[2]+k
+                
+                irrepg[ii] = deltag**[i, j, k]
+    
+    # Irrep table for all translations          
+    irreps = np.zeros((ntrans, ntrans), complex)
+    
+    # Loop over all posible products of powers of generators
+    for i in xrange(order[0]):
+        for j in xrange(order[1]):
+            for k in xrange(order[2]):
+                ti = i*order[1]*order[2]+j*order[2]+k
+                
+                # Get the translation vector
+                trans[ti] = np.dot([i, j, k], tgens)%1
+                
+                # Get all irreps of that translations
+                for l in xrange(ntrans):
+                    irreps[l, ti] = np.prod(irrepg[l]**[i, j, k])
+                    
+    return trans, irreps
+
+
+def build_projectors(irreps, ops, intdim=1):
+    '''Builds irrep projection operators, given irreps
+    and corresponding translation operator matrices.
+    Intdim specifies how many orbitals per atomic site 
+    there are.
+    '''
+    projs = np.zeros((len(irreps), ops.shape[1], ops.shape[2]), complex)
+    
+    # Loop over irreps
+    for i, ii in enumerate(irreps):
+        # Sum operators multiplied by their irrep
+        for j, oj in enumerate(ops):
+            projs[i] += irreps[i, j]*oj
+    
+    # Expand onto the orbital space and normalize
+    return np.kron(projs, np.eye(intdim))/len(ops)
+    
+    
+# NOTE: This won't parse the PROCAR file obtained
+# in the non-collinear spin-polarized calculation.
+# In the PROCAR file from a collinear spin-polarized 
+# calculation, the second spin component is ignored
+def parse_procar(filename):
+    try:
+        gl = Getlines(filename)
+    except:
+        post_error('Unable to open "{0}" for reading.'.format(filename))
+    
+    header_1 = gl.get_next()
+    header_2 = gl.get_next().split()
+    
+    npoints = int(header_2[3])
+    nbands = int(header_2[7])
+    nions = int(header_2[-1])
+    
+    # Remember the position in file
+    start = gl.tell()
+    
+    # Skip two lines containing first k-point and band
+    gl.get_next()
+    gl.get_next()
+    
+    # Determine the number of orbitals
+    orbitals = gl.get_next().split()[1:-1]
+    
+    norbs = len(orbitals)
+    
+    # Allocate storage
+    kpoints = np.zeros((npoints, 3), float)
+    kweights = np.zeros(npoints, float)
+    bands = np.zeros((npoints, nbands), float)
+    occupancies = np.zeros((npoints, nbands), float)
+    
+    # Check whether phase information is included
+    if '+ phase' in header_1:
+        # Allocate storage for weights
+        weights = np.zeros((npoints, nions*norbs, nbands), complex)
+        
+        # Declare nested function that handles 
+        # parsing of complex weights
+        def get_weights(i, j):
+            # Skip abs values of weights
+            for k in xrange(nions+3):
+                gl.get_next()
+            
+            for k in xrange(nions):
+                # Get real part
+                weights[i,k*norbs:(k+1)*norbs,j] = \
+                    np.array(gl.get_next().split()[1:], float)
+                # Get imaginary part    
+                weights[i,k*norbs:(k+1)*norbs,j] += \
+                    1j*np.array(gl.get_next().split()[1:], float)
+    else:
+        weights = np.zeros((npoints, nions*norbs, nbands), float)
+        
+        # Declare nested function that handles 
+        # parsing of real weights
+        def get_weights(i, j):
+            for k in xrange(nions+3):
+                weights[i,k*norbs:(k+1)*norbs,j] = \
+                    np.array(gl.get_next().split()[1:-1], float)
+    
+    # Go back to the beginning of the first k-point
+    gl.seek(start)
+    
+    for i in xrange(npoints):
+        k_line = gl.get_next().split()
+
+        kpoints[i] = np.array(k_line[3:6], float)
+        kweights[i] = float(k_line[-1])
+        
+        for j in xrange(nbands):
+            band_line = gl.get_next().split()
+
+            bands[i, j] = float(band_line[4])
+            occupancies[i, j] = float(band_line[-1])
+            
+            get_weights(i, j)
+    
+    return orbitals, kpoints, kweights, bands, occupancies, weights   
+    
+
+def write_procar(fname, orbitals, kpoints, kweights, bands, 
+                 occupations, weights):
+    # Labels for orbitals
+    orblabels = ['s', 'py', 'pz', 'px', 'dxy', 'dyz', 'dz2', 'dxz', 'dx2',
+                 'f-3', 'f-2', 'f-1', 'f0', 'f1', 'f2', 'f3']
+                
+    norb = len(orbitals)
+    npoints = len(kpoints)
+    nbands = bands.shape[1]
+    nions = weights.shape[1]/norb
+    
+    try:
+        out = open(fname, 'w')
+    except:
+        post_error('Unable to open "{0}" for writing'.format(fname))
+    
+    # Write the first line of the PROCAR file
+    out.write('PROCAR lm decomposed + phase\n')
+    
+    # Write the second line containing the sizes
+    out.write('# of k-points:  {0}         # of bands:  {1}'
+              '         # of ions:   {2}\n\n'.format(npoints, nbands, nions))
+
+    # Format out the column title line for orbital weights
+    orb_ttl_1 = 'ion '
+    orb_ttl_2 = 'ion '
+    
+    for i in xrange(norb):
+        orb_ttl_1 += '{0: >6} '.format(orblabels[i])
+        orb_ttl_2 += '{0: >6} '.format(orblabels[i])
+    
+    orb_ttl_1 += '{0: >6}\n'.format('tot')
+    orb_ttl_2 += '\n'
+    
+    for i, k in enumerate(kpoints):
+        # Write the k-point info
+        out.write(' k-point {0: >4} :    '.format(i+1))
+        out.write('{0:.8f} {1:.8f} {2:.8f}     '.format(*k))
+        out.write('weight = {0:.8f}\n\n'.format(kweights[i]))
+        
+        for j, b in enumerate(bands[i]):
+            # Write the band info
+            out.write('band {0: >4} # '.format(j+1))
+            out.write('energy {0: >13.8f} # '.format(b))
+            out.write('occ. {0: >11.8f}\n\n'.format(occupations[i, j]))
+            
+            out.write(orb_ttl_1)
+            
+            tot_orb = np.zeros(norb, float)
+            
+            for k in xrange(nions):
+                out.write('{0: >3} '.format(k+1))
+                
+                cw = weights[i, k*norb:(k+1)*norb, j]
+                aw = np.abs(cw)**2
+                
+                tot_orb += aw
+                
+                for l in xrange(norb):
+                    out.write('{0: >6.3f} '.format(aw[l]))
+                
+                out.write('{0: >6.3f}\n'.format(np.sum(aw)))
+            
+            out.write('tot ')
+            
+            for l in xrange(norb):
+                out.write('{0: >6.3f} '.format(tot_orb[l]))
+           
+            out.write('{0: >6.3f}\n'.format(np.sum(tot_orb)))
+            
+            out.write(orb_ttl_2)
+            
+            for k in xrange(nions):
+                out.write('{0: >3} '.format(k+1))
+                
+                cw = weights[i, k*norb:(k+1)*norb, j]
+                
+                for l in xrange(norb):
+                    out.write('{0: >6.3f} '.format(cw[l].real))
+                
+                out.write('\n{0: >3} '.format(k+1))
+                
+                for l in xrange(norb):
+                    out.write('{0: >6.3f} '.format(cw[l].imag))
+                
+                out.write('\n')
+            
+            out.write('\n')
+            
+        out.write('\n')
+        
+    out.close()
+
+
+
+def main():
+    desc_str = 'Unfold bands calculated by VASP. For this, phase '\
+               'information needs to be present in the PROCAR file '\
+               'which means that bands need to be calculated with '\
+               'the option LORBIT=12 specified in the INCAR file. '\
+               'The required input consists of POSCAR file, PROCAR '\
+               'file and a set of up to three fractional translations. '\
+               'There is no need to specify all translations, just the '\
+               'generators. The programs will generate all distinct '\
+               'translations from the generators and generate all irreps. '
+               
+               
+    parser = argparse.ArgumentParser(prog='vasp_unfold', description = desc_str)
+
+    parser.add_argument('poscar', type=str, help='POSCAR file')     
+    parser.add_argument('procar', type=str, help='PROCAR file')
+
+    parser.add_argument('--tgen', type=translation, action='append',
+                        metavar='SX,SY,SZ', help='Fractional translation '
+                        'generator. No whitespaces are allowed between the '
+                        'components! SX, SY and SZ can be either 0 or 1/n, '
+                        'where n is an integer. Up to three linearly '
+                        'independant generators can be specified.')
+
+    parser.add_argument('--out', type=str, help='Output filename. If left '
+                        'unspecified  output is writen to PROCAR.irrep.n '
+                        'where PROCAR is location of the input PROCAR file. '
+                        'If specified, output is written to OUT.irrep.n')
+    
+    parser.add_argument('--eps', type=float, default=1e-6, help='Numerical '
+                        'precision. When building permutation representation '
+                        'of the fractional translations this parameter is used '
+                        'to determine whether two fractional positions are '
+                        'identical. For irregular structures, it may need to '
+                        'be increased. If this does not help, try to tweak '
+                        'the atomic positions in POSCAR to make the structure '
+                        'more regular. Default is 1e-6')
+                                
+    args = parser.parse_args()
+    
+    tgens = args.tgen
+    
+    trans, irreps = build_translations(tgens)
+    
+    try:
+        cell, spos = parse_poscar(args.poscar)
+    except:
+        post_error('Unable to parse the input POSCAR file. Please '
+            'check if the file exists and is formatted properly')
+    
+    ops = build_operators(spos, trans, args.eps)
+    
+    try:
+        data = parse_procar(args.procar)
+    except:
+        post_error('Unable to parse the input PROCAR file. Please '
+            'check if the file exists and is formatted properly.')
+
+    weights = np.copy(data[-1])
+
+    norbs = weights.shape[1]/len(spos)
+    
+    projs = build_projectors(irreps, ops, norbs)
+    
+    if args.out is None:
+        output = args.procar
+    else:
+        output = args.out
+        
+    for i, p in enumerate(projs):
+        for j in xrange(data[-1].shape[0]):
+            try:
+                data[-1][j] = np.dot(p, weights[j])
+            except:
+                post_error('Unable to apply projectors. Are you sure '
+                    'that specified POSCAR and PROCAR file belong to '
+                    'the same crystal structure?')
+        
+        write_procar('{0}.irrep.{1}'.format(output, i), *data)
+       
+       
+if __name__ == '__main__':
+    main()
+    
+
