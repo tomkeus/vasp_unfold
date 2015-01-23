@@ -1,8 +1,8 @@
 # Bandstructure unfolding for VASP
 
-Here you can download vasp_unfold, a Python script which you can use to unfold the bandstructures obtained with VASP. This code is based on the method discussed in [Ref. 1](http://arxiv.org/abs/1408.2258).
+Here you can download vasp_unfold, a Python script which you can use to unfold the bandstructures obtained with VASP. This code is based on the method discussed in [Ref. 1](#ref_1).
 
-You can use the code in whatever way you see fit, but if it is used to produce the data for the publication, please cite [Ref. 1](http://arxiv.org/abs/1408.2258).
+You can use the code in whatever way you see fit, but if it is used to produce the data for the publication, please cite [Ref. 1](#ref_1).
 
 The code is given as is, ie. there is no guarantee that it will work. However, if you have some problems, or the code does not behave in a way you expect it to, I encourage you to report the problem to my [e-mail](mailto:tomic@itp.uni-frankfurt.de) and I will try to fix it as soon as possible.
 
@@ -19,7 +19,7 @@ No special installation is required. Just place it wherever it suits you and run
 
 vasp_unfold works as a postprocessing tool. The unfolding is achieved through manipulation of orbital weights. Basically, in the unfolded bandstructure, orbital weights of some bands are set to zero. This means that **the effect of unfolding can only be seen with the fatband plots**. In order for vasp_unfold to be able to work, the phase information must be present in the PROCAR file which means that **LORBIT=12 must be set in the INCAR file**.
 
-The workflow is as follows: once the bandstructure is calculated with VASP, the vasp_unfold is operated on the PROCAR file obtained in the bandstructure calculation, whereby a number of PROCAR files is produced, containing the unfolded bandstructure. Every PROCAR file generated in the output contains projection to one of the irreps as explained in [Ref. 1](http://arxiv.org/abs/1408.2258).
+The workflow is as follows: once the bandstructure is calculated with VASP, the vasp_unfold is operated on the PROCAR file obtained in the bandstructure calculation, whereby a number of PROCAR files is produced, containing the unfolded bandstructure. Every PROCAR file generated in the output contains projection to one of the irreps as explained in [Ref. 1](#ref_1).
 
 The command line usage of vasp_unfold is following
 
@@ -30,11 +30,12 @@ The command line usage of vasp_unfold is following
 where the parameters are
 
 ```
---tgen  Fractional translation generator
---out   Output filename prefix
---eps   Numerical tolerance for position discrimination
-poscar  Location of POSCAR file
-procar  Location of PROCAR file
+--tgen        Fractional translation generator
+--out         Output filename prefix
+--eps         Numerical tolerance for position discrimination
+--all-irreps  Write all irreps from the unfolding
+poscar        Location of POSCAR file
+procar        Location of PROCAR file
 ```
 
 Let us say that we have a 2x3x1 supercell. In total we have six unit cells contained within the supercell. To every unit cell in the supercell, corresponds one fractional translation (relative to the supercell), so that we have six fractional translations in total. These six fractional translations can be generated from two fractional translations given by vectors (1/2,0,0) and (0,1/3,0). We can then unfold the supercell bandstructure with 
@@ -43,7 +44,11 @@ Let us say that we have a 2x3x1 supercell. In total we have six unit cells conta
 vasp_unfold --tgen 1/2,0,0 --tgen 0,1/3,0 POSCAR PROCAR 
 ```
 
-The unfolded bandstructures will be located in PROCAR.irrep.0 through PROCAR.irrep.5. **NOTE**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
+The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --all-irreps flag was specified, the unfolded bandstructure will be located in PROCAR.irrep.0 through PROCAR.irrep.5 files. 
+
+**NOTE 1**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
+
+**NOTE 2**: in case of spin polarized calculation, vasp_unfold will ignore the second spin component. If you want to unfold the second spin component, just split the second spin component into the separate PROCAR file and run vasp_unfold.
  
 ## Resolving the issues with the code
 
@@ -53,4 +58,4 @@ The resolution to this problem is quite simple. If increase of the numerical tol
 
 ## References
 
-1. M. Tomić, H. O. Jeschke and R. Valentí - Unfolding of the electronic structure through the induced representations of space groups: Application to Fe-based superconductors ([arXiv preprint](http://arxiv.org/abs/1408.2258))
+1. <a name="ref_1"></a> M. Tomić, H. O. Jeschke and R. Valentí - Unfolding of the electronic structure through the induced representations of space groups: Application to Fe-based superconductors, [Phys. Rev. **B** 90, 195121  (2014)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.90.195121) ([arXiv preprint](http://arxiv.org/abs/1408.2258))

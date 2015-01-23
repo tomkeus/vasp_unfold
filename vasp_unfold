@@ -2,12 +2,14 @@
 
 
 # vasp_unfold
-# 
+#
+# version 1.1
+#
 # Author: Tomic Milan
 #
 # vasp_unfold is a code whose purpose is to perform the unfolding
 # of band structures calculated with VASP. It is based on the method
-# described in (arXiv:1408.2258). If this code have been used to 
+# described in (Phys. Rev. B 90, 195121). If this code have been used to 
 # obtain the data in your publication please cite the given reference.
 #
 # This code is provided as is. There is no guarantee that it will work.
@@ -18,6 +20,12 @@
 import numpy as np
 import argparse
 import sys
+
+        
+def post_error(error_info):
+    sys.stderr.write('\nError: '+error_info+'\n\n')
+    
+    exit()
 
 
 class Getlines(file):
@@ -33,19 +41,19 @@ class Getlines(file):
         '''Advance to the next non-empty line and return
         it, while stripping leading and trailing white-
         spaces and the newline'''
-        line = self.readline().strip()
+        line = self.readline()
+        
+        # Check for the end of file
+        if line == '':
+            post_error('Reached end of file.')
+        else:
+            line = line.strip()
         
         while len(line) == 0:
             line = self.readline().strip()
         
         return line.strip()
-        
-        
-def post_error(error_info):
-    sys.stderr.write('\nError: '+error_info+'\n\n')
-    
-    exit()
-    
+            
     
 def translation(tstring):
     try:        
@@ -244,11 +252,9 @@ def build_projectors(irreps, ops, intdim=1):
     # Expand onto the orbital space and normalize
     return np.kron(projs, np.eye(intdim))/len(ops)
     
-    
-# NOTE: This won't parse the PROCAR file obtained
-# in the non-collinear spin-polarized calculation.
-# In the PROCAR file from a collinear spin-polarized 
-# calculation, the second spin component is ignored
+
+# In the PROCAR file from a spin-polarized calculation,
+# the second spin component is ignored
 def parse_procar(filename):
     try:
         gl = Getlines(filename)
@@ -280,16 +286,42 @@ def parse_procar(filename):
     bands = np.zeros((npoints, nbands), float)
     occupancies = np.zeros((npoints, nbands), float)
     
+    tot_count = 0
+    
+    # Determine if the calculation was non-collinear
+    # by counting how many lines in the first band
+    # block begin with tot. If the number is greater
+    # than 1 than the calculation was non-collinear
+    while True:
+        line = gl.get_next()
+        
+        if line.startswith('tot'):
+            tot_count += 1
+        elif line.startswith('band'):
+            break
+    
+    if tot_count > 1:
+        collinear = False
+    else:
+        collinear = True
+        
     # Check whether phase information is included
     if '+ phase' in header_1:
         # Allocate storage for weights
         weights = np.zeros((npoints, nions*norbs, nbands), complex)
         
+        # In case of non-collinear calculations we
+        # have to skip over mx, my and mz blocks
+        if collinear is True:
+            wskip = nions+3
+        else:
+            wskip = 4*(nions+1)+2
+                
         # Declare nested function that handles 
         # parsing of complex weights
         def get_weights(i, j):
             # Skip abs values of weights
-            for k in xrange(nions+3):
+            for k in xrange(wskip):
                 gl.get_next()
             
             for k in xrange(nions):
@@ -300,21 +332,15 @@ def parse_procar(filename):
                 weights[i,k*norbs:(k+1)*norbs,j] += \
                     1j*np.array(gl.get_next().split()[1:], float)
     else:
-        weights = np.zeros((npoints, nions*norbs, nbands), float)
-        
-        # Declare nested function that handles 
-        # parsing of real weights
-        def get_weights(i, j):
-            for k in xrange(nions+3):
-                weights[i,k*norbs:(k+1)*norbs,j] = \
-                    np.array(gl.get_next().split()[1:-1], float)
+        post_error('This PROCAR file does not contain phase information. '
+            'Please set LORBIT=12 and repeat the calculation.')
     
     # Go back to the beginning of the first k-point
     gl.seek(start)
     
     for i in xrange(npoints):
         k_line = gl.get_next().split()
-
+        
         kpoints[i] = np.array(k_line[3:6], float)
         kweights[i] = float(k_line[-1])
         
@@ -461,7 +487,12 @@ def main():
                         'be increased. If this does not help, try to tweak '
                         'the atomic positions in POSCAR to make the structure '
                         'more regular. Default is 1e-6')
-                                
+
+    parser.add_argument('--all-irreps', default=False, action='store_true',
+                        help='Flag specifying that all irreps from the unfolding '
+                        'will be written to the output. By default, only irrep 0 '
+                        '(unit irrep) is written out')
+                                                                     
     args = parser.parse_args()
     
     tgens = args.tgen
@@ -492,8 +523,13 @@ def main():
         output = args.procar
     else:
         output = args.out
+    
+    if args.all_irreps:
+        nirrep = len(projs)
+    else:
+        nirrep = 1
         
-    for i, p in enumerate(projs):
+    for i, p in enumerate(projs[:nirrep]):
         for j in xrange(data[-1].shape[0]):
             try:
                 data[-1][j] = np.dot(p, weights[j])
