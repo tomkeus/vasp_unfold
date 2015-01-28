@@ -3,7 +3,7 @@
 
 # vasp_unfold
 #
-# version 1.1
+# version 1.2
 #
 # Author: Tomic Milan
 #
