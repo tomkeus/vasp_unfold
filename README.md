@@ -48,7 +48,7 @@ The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --al
 
 **NOTE 1**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
 
-**NOTE 2**: in case of spin polarized calculation, vasp_unfold will ignore the second spin component. If you want to unfold the second spin component, just split the second spin component into the separate PROCAR file and run vasp_unfold.
+**NOTE 2**: in case of spin polarized non-collinear calculation only spin-up and spin-down orbital weight totals will be unfolded. Orbital weight components for x,y and z component of spin won't be unfolded.
  
 ## Resolving the issues with the code
 
