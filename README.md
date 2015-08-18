@@ -24,18 +24,21 @@ The workflow is as follows: once the bandstructure is calculated with VASP, the 
 The command line usage of vasp_unfold is following
 
 ```
- usage: vasp_unfold [-h] [--tgen SX,SY,SZ] [--out OUT] [--eps EPS] poscar procar 
+usage: vasp_unfold [-h] [--tgen SX,SY,SZ] [--out OUT] [--eps EPS]
+                   [--all-irreps] [--check-mapping]
+                   poscar procar
  ```
 
 where the parameters are
 
 ```
---tgen        Fractional translation generator
---out         Output filename prefix
---eps         Numerical tolerance for position discrimination
---all-irreps  Write all irreps from the unfolding
-poscar        Location of POSCAR file
-procar        Location of PROCAR file
+--tgen           Fractional translation generator
+--out            Output filename prefix
+--eps            Numerical tolerance for position discrimination
+--all-irreps     Write all irreps from the unfolding
+--check-mapping  Verify if fractional translations map atoms one-to-one
+poscar           Location of POSCAR file
+procar           Location of PROCAR file
 ```
 
 Let us say that we have a 2x3x1 supercell. In total we have six unit cells contained within the supercell. To every unit cell in the supercell, corresponds one fractional translation (relative to the supercell), so that we have six fractional translations in total. These six fractional translations can be generated from two fractional translations given by vectors (1/2,0,0) and (0,1/3,0). We can then unfold the supercell bandstructure with 
@@ -49,6 +52,8 @@ The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --al
 **NOTE 1**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
 
 **NOTE 2**: in case of spin polarized non-collinear calculation only spin-up and spin-down orbital weight totals will be unfolded. Orbital weight components for x,y and z component of spin won't be unfolded.
+
+**NOTE 3**: do not enable --check-mapping flag if your structure has vacancies or excess atoms, since in this case fractional translations do not map every atom onto some other atom.
  
 ## Resolving the issues with the code
 
