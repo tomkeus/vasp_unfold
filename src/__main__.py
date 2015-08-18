@@ -55,7 +55,7 @@ def main():
     parser.add_argument('--out', type=str, help='Output filename. If left '
                         'unspecified  output is writen to PROCAR.irrep.n '
                         'where PROCAR is location of the input PROCAR file. '
-                        'If specified, output is written to OUT.irrep.n')
+                        'If specified, output is written to OUT.irrep.n.')
     
     parser.add_argument('--eps', type=float, default=1e-6, help='Numerical '
                         'precision. When building permutation representation '
@@ -64,12 +64,19 @@ def main():
                         'identical. For irregular structures, it may need to '
                         'be increased. If this does not help, try to tweak '
                         'the atomic positions in POSCAR to make the structure '
-                        'more regular. Default is 1e-6')
-
+                        'more regular. Default is 1e-6.')
+    
     parser.add_argument('--all-irreps', default=False, action='store_true',
                         help='Flag specifying that all irreps from the unfolding '
                         'will be written to the output. By default, only irrep 0 '
-                        '(unit irrep) is written out')
+                        '(unit irrep) is written out.')
+                        
+    parser.add_argument('--check-mapping', action='store_true', default=False,
+                        help='Specifies to check if supplied translation '
+                        'generators generate fractional translations which are '
+                        'one-to-one, ie. map every atom on exactly one other atom '
+                        'in the unit cell. This MUST not be enabled for the cases '
+                        'where vacancies or excess atoms are present.')
                                                                      
     args = parser.parse_args()
     
@@ -83,7 +90,7 @@ def main():
         post_error('Unable to parse the input POSCAR file. Please '
             'check if the file exists and is formatted properly')
     
-    ops = build_operators(spos, trans, args.eps)
+    ops = build_operators(spos, trans, args.check_mapping, args.eps)
     
     try:
         data = parse_procar(args.procar)

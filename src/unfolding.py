@@ -2,7 +2,7 @@ import numpy as np
 from utils import post_error, lcmm
 
 
-def build_operators(spos, trans, eps=1e-6):
+def build_operators(spos, trans, check_mapping=False, eps=1e-6):
     '''Given a list of fractional positions, and a list of
     fractional translations, produce a set of matrices, 
     describing how fractional translations permute atomic
@@ -25,13 +25,14 @@ def build_operators(spos, trans, eps=1e-6):
                 disp = sk-sj-ti
                 ops[i, j, k] = np.linalg.norm(disp-np.rint(disp)) < eps
 
-    # Every row and every column of every operator must
-    # contain exactly one unity, otherwise translations
-    # are not maping atoms one-to-one.
-    if np.any(np.sum(ops, axis=1) != 1) or np.any(np.sum(ops, axis=2) != 1):
-        post_error('Translations are not one-to-one. '
-            'Try changing the matching tolerance, or try using '
-            'the POSCAR file with more regular positions.')
+    if check_mapping:
+        # Every row and every column of every operator must
+        # contain exactly one unity, otherwise translations
+        # are not maping atoms one-to-one.
+        if np.any(np.sum(ops, axis=1) != 1) or np.any(np.sum(ops, axis=2) != 1):
+            post_error('Translations are not one-to-one. '
+                'Try changing the matching tolerance, or try using '
+                'the POSCAR file with more regular positions.')
 
     return ops
     
