@@ -57,7 +57,7 @@ The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --al
  
 ## Resolving the issues with the code
 
-Here is a little advice pertaining to the "Translations are not one-to-one" error. This problem arises because the vasp_unfold script tries to figure out which atoms are mapped onto which atoms under the action of the fractional translations. If the supercell would be perfectly symmetrical under the fractional translations, this issue would not occur. However, in real life, the supercell will usually break this translational symmetry which means that atoms wont be mapped exactly onto each other by the fractional translations.
+Here is a little advice pertaining to the "Translations are not one-to-one" error when --chek-mapping flag is enabled. This problem arises because the vasp_unfold script tries to figure out which atoms are mapped onto which atoms under the action of the fractional translations. If the supercell would be perfectly symmetrical under the fractional translations, this issue would not occur. However, in real life, the supercell will usually break this translational symmetry which means that atoms wont be mapped exactly onto each other by the fractional translations.
 
 The resolution to this problem is quite simple. If increase of the numerical tolerance parameter does not give any result, simply use the POSCAR file where the atomic positions are restored to their symmetryc sites. Practically, if your supercell is a result of the structural optimization, use the initial POSCAR file instead of the final one. 
 
