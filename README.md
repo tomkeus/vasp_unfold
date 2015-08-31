@@ -52,10 +52,12 @@ vasp_unfold --tgen 1/2,0,0 --tgen 0,1/3,0 POSCAR PROCAR
 
 The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --all-irreps flag was specified, the unfolded bandstructure will be located in PROCAR.irrep.0 through PROCAR.irrep.5 files. 
 
-**NOTE 1**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
+**NOTE 1**: No whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
 
-**NOTE 2**: do not enable --check-mapping flag if your structure has vacancies or excess atoms, since in this case fractional translations do not map every atom onto some other atom.
+**NOTE 2**: Do not enable --check-mapping flag if your structure has vacancies or excess atoms, since in this case fractional translations do not map every atom onto some other atom.
  
+**NOTE 3**: Numerical tolerance for position discrimination, --eps, is not specified in the units of your unit cell (ie. Angstroms). Instead it is given in the fractional units.
+
 ## Resolving the issues with the code
 
 Here is a little advice pertaining to the "Translations are not one-to-one" error when --chek-mapping flag is enabled. This problem arises because the vasp_unfold script tries to figure out which atoms are mapped onto which atoms under the action of the fractional translations. If the supercell would be perfectly symmetrical under the fractional translations, this issue would not occur. However, in real life, the supercell will usually break this translational symmetry which means that atoms wont be mapped exactly onto each other by the fractional translations.
