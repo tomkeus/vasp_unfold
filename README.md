@@ -58,6 +58,8 @@ The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --al
  
 **NOTE 3**: Numerical tolerance for position discrimination, --eps, is not specified in the units of your unit cell (ie. Angstroms). Instead it is given in the fractional units.
 
+**NOTE 4**: Unfolding of the k-path is **NOT** automatic! This means, that you have to manually specify the k-path in the Brillouin zone of your supercell. Fortunately, that is easy to do! If you have a n<sub>1</sub> x n<sub>2</sub> x n<sub>3</sub> supercell, you just need to multiply every k-point's 1st, 2nd and 3rd components by n<sub>1</sub>, n<sub>2</sub> and n<sub>3</sub> respectively (when the KPOINTS file is in the reciprocal mode).
+
 ## Resolving the issues with the code
 
 Here is a little advice pertaining to the "Translations are not one-to-one" error when --chek-mapping flag is enabled. This problem arises because the vasp_unfold script tries to figure out which atoms are mapped onto which atoms under the action of the fractional translations. If the supercell would be perfectly symmetrical under the fractional translations, this issue would not occur. However, in real life, the supercell will usually break this translational symmetry which means that atoms wont be mapped exactly onto each other by the fractional translations.
@@ -67,3 +69,4 @@ The resolution to this problem is quite simple. If increase of the numerical tol
 ## References
 
 1. <a name="ref_1"></a> M. Tomić, H. O. Jeschke and R. Valentí - Unfolding of the electronic structure through the induced representations of space groups: Application to Fe-based superconductors, [Phys. Rev. **B** 90, 195121  (2014)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.90.195121) ([arXiv preprint](http://arxiv.org/abs/1408.2258))
+
