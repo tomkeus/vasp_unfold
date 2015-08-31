@@ -4,6 +4,8 @@ Here you can download vasp_unfold, a Python script which you can use to unfold t
 
 You can use the code in whatever way you see fit, but if it is used to produce the data for the publication, please cite [Ref. 1](#ref_1).
 
+In addition, a small utility called fatplot is provided to quickly plot the bandstructures contained in the VASPs PROCAR files.
+
 The code is given as is, ie. there is no guarantee that it will work. However, if you have some problems, or the code does not behave in a way you expect it to, I encourage you to report the problem to my [e-mail](mailto:tomic@itp.uni-frankfurt.de) and I will try to fix it as soon as possible.
 
 ## Installation
@@ -12,6 +14,7 @@ Dependencies are
 
 * [Python](http://www.python.org/downloads/) ofcourse. The script requires Python2.7 or greater
 * [NumPy](http://www.scipy.org/scipylib/download.html) library for Python
+* [matplotlib](http://matplotlib.org/downloads.html) library for Python (only needed if fatplot is used)
 
 No special installation is required. Just place it wherever it suits you and run it. 
 
@@ -51,9 +54,7 @@ The unfolded bandstructures will be located in PROCAR.irrep.0 file. In case --al
 
 **NOTE 1**: no whitespace is allowed in the fractional translation generator specification. Also, the components can be either 0, or 1/N, where N is an integer. Floating point values are not allowed. 
 
-**NOTE 2**: in case of spin polarized non-collinear calculation only spin-up and spin-down orbital weight totals will be unfolded. Orbital weight components for x,y and z component of spin won't be unfolded.
-
-**NOTE 3**: do not enable --check-mapping flag if your structure has vacancies or excess atoms, since in this case fractional translations do not map every atom onto some other atom.
+**NOTE 2**: do not enable --check-mapping flag if your structure has vacancies or excess atoms, since in this case fractional translations do not map every atom onto some other atom.
  
 ## Resolving the issues with the code
 

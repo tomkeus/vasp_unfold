@@ -1,3 +1,14 @@
+#===========================================================
+#
+#  PROJECT: vasp_unfold
+#  FILE:    write.py
+#  AUTHOR:  Milan Tomic
+#  EMAIL:   tomic@th.physik.uni-frankfurt.de
+#  VERSION: 1.3
+#  DATE:    Aug 31st 2015
+#
+#===========================================================
+
 import numpy as np
 from utils import post_error
 
@@ -9,7 +20,7 @@ def write_procar(fname, orbitals, kpoints, kweights, bands,
     # Labels for orbitals
     orblabels = ['s', 'py', 'pz', 'px', 'dxy', 'dyz', 'dz2', 'dxz', 'dx2',
                  'f-3', 'f-2', 'f-1', 'f0', 'f1', 'f2', 'f3']
-                
+    
     norb = len(orbitals)
     npoints = len(kpoints)
     nbands = bands.shape[1]

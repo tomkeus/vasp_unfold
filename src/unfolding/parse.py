@@ -1,3 +1,14 @@
+#===========================================================
+#
+#  PROJECT: vasp_unfold
+#  FILE:    parse.py
+#  AUTHOR:  Milan Tomic
+#  EMAIL:   tomic@th.physik.uni-frankfurt.de
+#  VERSION: 1.3
+#  DATE:    Aug 31st 2015
+#
+#===========================================================
+
 import numpy as np
 from utils import Getlines, post_error
 
@@ -14,23 +25,23 @@ def parse_poscar(filename):
         post_error('Unable to open "{0}" for reading.'.format(filename))
     
     # Skip the comment line
-    gl.get_next()
+    gl.readline()
     
     # Read the scaling factor
-    f = float(gl.get_next())
+    f = float(gl.readline())
     
     # Read the unit cell vectors
     cell = np.zeros((3, 3), float)
     
-    cell[0] = f*np.array(gl.get_next().split(), float)
-    cell[1] = f*np.array(gl.get_next().split(), float)
-    cell[2] = f*np.array(gl.get_next().split(), float)
+    cell[0] = f*np.array(gl.readline().split(), float)
+    cell[1] = f*np.array(gl.readline().split(), float)
+    cell[2] = f*np.array(gl.readline().split(), float)
     
     # Read the chemical symbols
-    syms = gl.get_next().split()
+    syms = gl.readline().split()
     
     # Read the atom counts
-    counts = np.array(gl.get_next().split(), int)
+    counts = np.array(gl.readline().split(), int)
     
     # Get the number of atoms
     natoms = np.sum(counts)
@@ -42,7 +53,7 @@ def parse_poscar(filename):
         symbols += [s]*c
     
     # Cartesian or fractional coordinates?
-    ctype = gl.get_next()[0].lower()
+    ctype = gl.readline()[0].lower()
     
     if ctype == 'c':
         mult = np.linalg.inv(cell)
@@ -56,7 +67,11 @@ def parse_poscar(filename):
     
     # Read the positions
     for i in xrange(len(symbols)):
-        spos[i] = np.array(gl.get_next().split()[:3], float)
+        spos[i] = np.array(gl.readline().split()[:3], float)
+    
+    # If necessary, this will convert from
+    # Cartesian to fractional coordinates
+    spos = np.dot(spos, mult)
     
     return cell, spos, symbols
     
@@ -84,14 +99,14 @@ def parse_procar(filename):
     nions   - number of atoms
     ndim    - orbital weight dimensionality (1 for collinear, 4 otherwise)
     '''
-    
+
     try:
         gl = Getlines(filename)
     except:
         post_error('Unable to open "{0}" for reading.'.format(filename))
-    
-    header_1 = gl.get_next()
-    header_2 = gl.get_next().split()
+
+    header_1 = gl.readline()
+    header_2 = gl.readline().split()
     
     npoints = int(header_2[3])
     nbands = int(header_2[7])
@@ -101,11 +116,11 @@ def parse_procar(filename):
     start = gl.tell()
     
     # Skip two lines containing first k-point and band
-    gl.get_next()
-    gl.get_next()
+    gl.readline()
+    gl.readline()
     
     # Determine the number of orbitals
-    orbitals = gl.get_next().split()[1:-1]
+    orbitals = gl.readline().split()[1:-1]
     
     norbs = len(orbitals)
     
@@ -126,7 +141,7 @@ def parse_procar(filename):
     # to the number of sub-blocks for orbital weights
     # (1 in case of collinear and 4 otherwise)
     while True:
-        line = gl.get_next()
+        line = gl.readline()
         
         if line.startswith('tot'):
             dim += 1
@@ -137,17 +152,19 @@ def parse_procar(filename):
     # for i-th k-point, j-th band and s-th spin component
     def get_absweights(i, j, s):
         # Skip line with orbital names        
-        gl.get_next()
+        gl.readline()
         
-        # k loops over total, mx, my and mz
         for k in xrange(dim):
-            # l goes over ions
-            for l in xrange(nions):
-                weights[i,l*norbs:(l+1)*norbs,j,k,s] = \
-                    np.array(gl.get_next().split()[1:-1], float)
+            # Fetch entire orbital weight block
+            data = np.fromfile(gl, sep=" ", count=nions*(norbs+2))
+            # Cast it into tabular shape
+            data = data.reshape((nions, norbs+2))
             
-            # Skip line with totals
-            gl.get_next()
+            # Discard first and last columns and store weights
+            weights[i,:,j,k,s] = data[:,1:-1].flatten()
+            
+            # Skip line with the totals
+            gl.readline()
             
     # Check whether phase information is included
     if '+ phase' in header_1:
@@ -161,15 +178,17 @@ def parse_procar(filename):
             get_absweights(i, j, s)
             
             # Skip line with orbital names
-            gl.get_next()
+            gl.readline()
             
-            for k in xrange(nions):
-                # Get real part
-                phases[i,k*norbs:(k+1)*norbs,j,s] = \
-                    np.array(gl.get_next().split()[1:], float)
-                # Get imaginary part    
-                phases[i,k*norbs:(k+1)*norbs,j,s] += \
-                    1j*np.array(gl.get_next().split()[1:], float)
+            # Fetch entire phase block
+            data = np.fromfile(gl, sep=" ", count=2*nions*(norbs+1))
+            # Cast it into tabular shape
+            data = data.reshape((2*nions, norbs+1))
+
+            # Discard first column and store real and imaginary
+            # parts respectively
+            phases[i,:,j,s] =  data[::2,1:].flatten()
+            phases[i,:,j,s] += 1j*data[1::2,1:].flatten()
     else:
         # Phases are None in this case
         phases = None
@@ -183,14 +202,14 @@ def parse_procar(filename):
     
     for i in xrange(npoints):
         # Parse k-point coordinates
-        k_line = gl.get_next().split()
+        k_line = gl.readline().split()
         
-        kpoints[i] = np.array(k_line[3:6], float)
+        kpoints[i] = [float(k_line[c]) for c in [3, 4, 5]]
         kweights[i] = float(k_line[-1])
         
         for j in xrange(nbands):
             # Parse band energy
-            band_line = gl.get_next().split()
+            band_line = gl.readline().split()
 
             bands[i, j, 0] = float(band_line[4])
             occupancies[i, j, 0] = float(band_line[-1])
@@ -199,7 +218,7 @@ def parse_procar(filename):
             get_weights(i, j, 0)
     
     # Seek now for the second spin component
-    res = gl.get_next(False)
+    res = gl.readline(False)
     
     # If there is no second spin component, finish by
     # returning just the first component
@@ -211,18 +230,18 @@ def parse_procar(filename):
         
         if phases is not None:
             phases = phases[:,:,:,:1]
-            
-        return orbitals, kpoints, kweights, bands, occupancies, \
-            weights, phases
+        
+        return [orbitals, kpoints, kweights, bands, occupancies, \
+            weights, phases]
     
     # Otherwise, read bands and weights for the second component
     for i in xrange(npoints):
         # Skip k-point coordinates
-        gl.get_next()
+        gl.readline()
         
         for j in xrange(nbands):
             # Parse band energy
-            band_line = gl.get_next().split()
+            band_line = gl.readline().split()
 
             bands[i, j, 1] = float(band_line[4])
             occupancies[i, j, 1] = float(band_line[-1])
@@ -230,8 +249,7 @@ def parse_procar(filename):
             # Parse orbital weights
             get_weights(i, j, 1)
     
-    return orbitals, kpoints, kweights, bands, occupancies, \
-        weights[:,:,:,:dim,:], phases
-
+    return [orbitals, kpoints, kweights, bands, occupancies, \
+        weights[:,:,:,:dim,:], phases]
 
 

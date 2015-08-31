@@ -1,0 +1,49 @@
+Jan 23th 2015
+=============
+
+v1.0
+
+* Added the possiblity to parse the PROCAR file from the
+  non-collinear spin-polarized calculation.
+
+* Added the possibility to unfold both spin up and spin
+  down components.
+  
+
+Jan 28th 2015
+=============
+
+v1.1
+
+* Refactored code into separate files. App can be packed 
+  into single executable with pack.sh script. 
+  
+* Spin polarized and non-collinear PROCARS are now fully 
+  parsed.
+
+
+Aug 18th 2015
+=============
+
+v1.2
+
+* Can handle vacancies and excess atoms not. One to one
+  mapping check is now optional.
+  
+
+Aug 31st 2015
+=============
+
+v1.3
+
+* Changed the way orbital weights are unfolded. Orbital
+  weights from the non-collinear spin-polarized calculation
+  are now fully unfolded.
+  
+* Added a small plotting utility to plot fatbands.
+
+* File structure reorganized again.
+
+* Added extended error message regarding broken PROCAR
+  formatting.
+

@@ -1,3 +1,14 @@
+#===========================================================
+#
+#  PROJECT: vasp_unfold
+#  FILE:    unfolding.py
+#  AUTHOR:  Milan Tomic
+#  EMAIL:   tomic@th.physik.uni-frankfurt.de
+#  VERSION: 1.3
+#  DATE:    Aug 31st 2015
+#
+#===========================================================
+
 import numpy as np
 from utils import post_error, lcmm
 

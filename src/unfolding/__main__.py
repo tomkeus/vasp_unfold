@@ -1,11 +1,15 @@
 #! /usr/bin/env python
 
 
-# vasp_unfold
+#============================================================================
 #
-# version 1.2
+#  PROJECT: vasp_unfold
+#  FILE:    __main__.py
+#  AUTHOR:  Milan Tomic
+#  EMAIL:   tomic@th.physik.uni-frankfurt.de
+#  VERSION: 1.3
+#  DATE:    Aug 31st 2015
 #
-# Author: Tomic Milan
 #
 # vasp_unfold is a code whose purpose is to perform the unfolding
 # of band structures calculated with VASP. It is based on the method
@@ -15,6 +19,8 @@
 # This code is provided as is. There is no guarantee that it will work.
 # However, if you encounter errors or unexpected behavor, please report
 # it to tomic@itp.uni-frankfurt.de and I will try to improve it.
+#
+#============================================================================
 
 
 import numpy as np
@@ -24,6 +30,7 @@ from utils import post_error, translation
 from unfolding import build_translations, build_operators, build_projectors
 from parse import parse_poscar, parse_procar
 from write import write_procar
+import errors
 
 def main():
     desc_str = 'Unfold bands calculated by VASP. For this, phase '\
@@ -95,15 +102,14 @@ def main():
     try:
         data = parse_procar(args.procar)
     except:
-        post_error('Unable to parse the input PROCAR file. Please '
-            'check if the file exists and is formatted properly.')
-
-    phases = np.copy(data[-1])
+        post_error(errors.poscar_parse_error)
     
-    if phases is None:
+    if data[-1] is None:
         post_error('Phase information has to be present in the PROCAR '
             'file. Please repeat the calculation with LORBIT=12.')
 
+    phases = np.copy(data[-1])
+    
     norbs = phases.shape[1]/len(spos)
     
     projs = build_projectors(irreps, ops, norbs)
@@ -128,11 +134,13 @@ def main():
                     'the same crystal structure?')
         
         # We update total absolute weights to correspond to
-        # unfolded phases.
-        # WARNING: In non-collinear calculations, mx, my and
-        # mz weight blocks are not unfolded
-        data[-2][:,:,:,0,:] = np.abs(data[-1])
+        # unfolded phases (by multiplying them by the magnitude
+        # ratio of unfolded and folded phases 
+        phase_ratio = np.abs(data[-1])/(np.abs(phases)+1e-4)
         
+        for idim in xrange(data[-2].shape[3]):
+            data[-2][:,:,:,idim,:] *= phase_ratio
+
         write_procar('{0}.irrep.{1}'.format(output, i), *data)
        
        
