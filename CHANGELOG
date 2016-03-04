@@ -47,3 +47,13 @@ v1.3
 * Added extended error message regarding broken PROCAR
   formatting.
 
+
+Mar 4th 2016
+=============
+
+v1.31
+
+* Fixed the output format for the unfolded PROCAR in the case
+  of the non-collinear calculation.
+  
+
