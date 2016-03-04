@@ -71,8 +71,9 @@ def write_procar(fname, orbitals, kpoints, kweights, bands,
                 # non-collinear calculation, there is four
                 # such blocks
                 for d in xrange(ndim):
-                    # Write names of orbitals (s, px, py etc...)
-                    out.write(orb_ttl_1)
+                    if d == 0:
+                        # Write names of orbitals (s, px, py etc...)
+                        out.write(orb_ttl_1)
                     
                     # Allocate storage for accumulation of orbital totals
                     tot_orb = np.zeros(norb, float)
