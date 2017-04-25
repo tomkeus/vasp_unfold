@@ -57,3 +57,10 @@ v1.31
   of the non-collinear calculation.
   
 
+Apr 25th 2017
+=============
+
+v1.32
+
+* Added handling of fractional translation generators components
+  as general fractions (previously only 1/x was possible).
