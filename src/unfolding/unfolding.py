@@ -4,13 +4,13 @@
 #  FILE:    unfolding.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.3
-#  DATE:    Aug 31st 2015
+#  VERSION: 1.32
+#  DATE:    Apr 25th 2017
 #
 #===========================================================
 
 import numpy as np
-from utils import post_error, lcmm
+from utils import post_error, frac_translation_order
 
 
 def build_operators(spos, trans, check_mapping=False, eps=1e-6):
@@ -50,8 +50,8 @@ def build_operators(spos, trans, check_mapping=False, eps=1e-6):
     
 def build_translations(tgens):
     '''Build a list of translations and irreps from at most 
-    three linearly independent generators specified in the 
-    form [nx,ny,nz], representing translation [1/nx,1/ny,1/nz].
+    three linearly independent generators specified as lists
+    of three fractions.
     '''
     if len(tgens) > 3:
         post_error('There can be at most three generators '
@@ -63,18 +63,18 @@ def build_translations(tgens):
     elif len(tgens) == 3 and np.linalg.det(tgens) == 0:
         post_error('Generators are not linearly independant.')
         
-    # Expand the generator list to have a 3x3 matrix
+    # Expand the generator list to be a 3x3 matrix
     tgens = np.append(tgens, np.ones((3-len(tgens), 3)), axis=0)
-
+    
     # Get the order of every generator
-    order = np.array([lcmm(*g) for g in tgens], int)
-
+    order = np.array([frac_translation_order(g) for g in tgens], int)
+    
     # Get the corresponding roots of unity which will be
     # used to construct irreps
     deltag = np.exp(-2*np.pi*1j/order)
     
-    # Calculate translation vectors
-    tgens = (1.0/tgens)%1
+    # Fold the translation vectors into the unit cell
+    tgens = tgens % 1
     
     # Total number of translations
     ntrans = np.prod(order)

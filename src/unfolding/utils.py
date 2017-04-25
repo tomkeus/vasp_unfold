@@ -4,14 +4,15 @@
 #  FILE:    utils.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.3
-#  DATE:    Aug 31st 2015
+#  VERSION: 1.32
+#  DATE:    Apr 25th 2017
 #
 #===========================================================
 
 import numpy as np
 import argparse
 import sys
+import fractions
 
         
 def post_error(error_info):
@@ -82,30 +83,42 @@ def translation(tstring):
     Valid form has comma separated components, where 
     every component either 0 or 1/n, with n positive
     integer. During parsing 0 is replaced with 1/1
-    and integer array containing denominators is returned.
+    and array of three fractions is returned.
     '''
     try:        
         tstring = tstring.replace('0', ' 1/1')
 
-        return np.array([int(s.split('/')[1]) for s in tstring.split(',')])
+        return [fractions.Fraction(s) for s in tstring.split(',')]
     except:
         post_error('Unable to parse string: "{0}". Check help for valid '
                    'translation generator specification'.format(tstring))
     
-    
-def gcd(a, b):
-    '''Return greatest common divisor using Euclid's Algorithm.'''
-    while b:      
-        a, b = b, a % b
-    return a
-
 
 def lcm(a, b):
     '''Return lowest common multiple.'''
-    return a * b // gcd(a, b)
+    return a * b // fractions.gcd(a, b)
 
 
 def lcmm(*args):
     '''Return lcm of args.'''   
     return reduce(lcm, args)
+    
+
+def fraction_order(fract):
+    '''Return the lowest integer multiple of a fraction 
+    that yields an integer.
+    '''
+    if not isinstance(fract, fractions.Fraction):
+        fract = fractions.Fraction(fract)
+        
+    return lcm(fract.numerator, fract.denominator) / fract.numerator
+    
+
+def frac_translation_order(trans):
+    '''Returns the lowest integer multiple of a fractional 
+    translation that yields translation with integer components.
+    '''
+    order = [fraction_order(ti) for ti in trans]
+    
+    return lcmm(*order)
     

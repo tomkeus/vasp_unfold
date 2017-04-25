@@ -4,8 +4,8 @@
 #  FILE:    write.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.3
-#  DATE:    Aug 31st 2015
+#  VERSION: 1.32
+#  DATE:    Apr 25th 2017
 #
 #===========================================================
 
