@@ -64,3 +64,11 @@ v1.32
 
 * Added handling of fractional translation generators components
   as general fractions (previously only 1/x was possible).
+  
+May 30th 2017
+=============
+
+v1.33
+
+* Fixed improper checking of linear independence of fractional translation
+  generators

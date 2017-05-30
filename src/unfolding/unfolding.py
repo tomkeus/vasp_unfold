@@ -57,10 +57,13 @@ def build_translations(tgens):
         post_error('There can be at most three generators '
             'of fractional translations.')
     
+    # Use folded generators to perform linear independece tests
+    tgensf = np.array(tgens)%1
+    
     # Check if generators are linearly independent
-    if len(tgens) == 2 and np.all(np.cross(tgens[0], tgens[1]) == 0):
+    if len(tgens) == 2 and np.all(np.cross(tgensf[0], tgensf[1]) == 0):
         post_error('Generators are not linearly independant.')
-    elif len(tgens) == 3 and np.linalg.det(tgens) == 0:
+    elif len(tgens) == 3 and np.linalg.det(np.array(tgensf)) == 0:
         post_error('Generators are not linearly independant.')
         
     # Expand the generator list to be a 3x3 matrix
