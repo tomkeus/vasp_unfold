@@ -4,8 +4,8 @@
 #  FILE:    unfolding.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.32
-#  DATE:    Apr 25th 2017
+#  VERSION: 1.34
+#  DATE:    May 31st 2017
 #
 #===========================================================
 
@@ -57,13 +57,16 @@ def build_translations(tgens):
         post_error('There can be at most three generators '
             'of fractional translations.')
     
-    # Use folded generators to perform linear independece tests
-    tgensf = np.array(tgens)%1
+    # Use folded generators as floats to perform linear independece tests
+    tgensf = np.array(tgens, dtype=float)%1
+    
+    # Tolerance for linear independenec per dimension
+    eps = 1e-2
     
     # Check if generators are linearly independent
-    if len(tgens) == 2 and np.all(np.cross(tgensf[0], tgensf[1]) == 0):
+    if len(tgens) == 2 and np.all(np.cross(tgensf[0], tgensf[1]) < eps**2):
         post_error('Generators are not linearly independant.')
-    elif len(tgens) == 3 and np.linalg.det(np.array(tgensf)) == 0:
+    elif len(tgens) == 3 and np.linalg.det(np.array(tgensf)) < eps**3:
         post_error('Generators are not linearly independant.')
         
     # Expand the generator list to be a 3x3 matrix

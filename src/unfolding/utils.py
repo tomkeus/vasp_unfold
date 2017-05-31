@@ -4,8 +4,8 @@
 #  FILE:    utils.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.32
-#  DATE:    Apr 25th 2017
+#  VERSION: 1.34
+#  DATE:    May 31st 2017
 #
 #===========================================================
 
@@ -85,10 +85,8 @@ def translation(tstring):
     integer. During parsing 0 is replaced with 1/1
     and array of three fractions is returned.
     '''
-    try:        
-        tstring = tstring.replace('0', ' 1/1')
-
-        return [fractions.Fraction(s) for s in tstring.split(',')]
+    try:
+        return [fractions.Fraction(s) if s.strip() != "0" else 1 for s in tstring.split(',')]
     except:
         post_error('Unable to parse string: "{0}". Check help for valid '
                    'translation generator specification'.format(tstring))

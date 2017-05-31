@@ -71,4 +71,12 @@ May 30th 2017
 v1.33
 
 * Fixed improper checking of linear independence of fractional translation
-  generators
+  generators.
+
+  
+  May 31st 2017
+=============
+
+v1.34
+
+* Fixed bug with numpy fraction issues.
