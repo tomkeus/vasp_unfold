@@ -4,8 +4,8 @@
 #  FILE:    utils.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.34
-#  DATE:    May 31st 2017
+#  VERSION: 1.4
+#  DATE:    December 12th 2017
 #
 #===========================================================
 
@@ -13,12 +13,26 @@ import numpy as np
 import argparse
 import sys
 import fractions
+import traceback
 
         
-def post_error(error_info):
+def post_error(error_info, show_traceback=False):
     '''Write error message to sderr and exit program
     '''
-    sys.stderr.write('\nError: '+error_info+'\n\n')
+    message = '\nError: '+error_info+'\n\n'
+    
+    if show_traceback:
+        # Show exception traceback
+        tb_msg = traceback.format_exc()
+        
+        max_line_len = max(len(line) for line in tb_msg.split('\n'))
+        
+        message += 'Operation failed due to the following exception:\n'
+        message += '='*max_line_len
+        message += '\n' + traceback.format_exc()
+        message += '='*max_line_len
+    
+    sys.stderr.write(message)
     
     exit()
     
@@ -90,8 +104,18 @@ def translation(tstring):
     except:
         post_error('Unable to parse string: "{0}". Check help for valid '
                    'translation generator specification'.format(tstring))
-    
 
+def version(vstring):
+    '''Parse string containing version information.
+    Valid form has dot separated digits. Returns tuple
+    of integers which are to be lexicographically compared.
+    '''
+    try:
+        return tuple(int(d) for d in vstring.split('.'))
+    except:
+        post_error('Unable to parse string: "{0}". The valid version '
+                   'is composed of dot separated digists'.format(vstring))
+                   
 def lcm(a, b):
     '''Return lowest common multiple.'''
     return a * b // fractions.gcd(a, b)

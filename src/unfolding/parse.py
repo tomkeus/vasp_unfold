@@ -4,8 +4,8 @@
 #  FILE:    parse.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.32
-#  DATE:    Apr 25th 2017
+#  VERSION: 1.4
+#  DATE:    December 12th 2017
 #
 #===========================================================
 
@@ -55,12 +55,15 @@ def parse_poscar(filename):
     # Cartesian or fractional coordinates?
     ctype = gl.readline()[0].lower()
     
+    if ctype == 's':
+        ctype = gl.readline()[0].lower()
+        
     if ctype == 'c':
         mult = np.linalg.inv(cell)
     elif ctype == 'd':
         mult = np.eye(3)
     else:
-        post_error('"{0}" is unknown POSCAR option'.format(plines[7].strip()))
+        post_error('"{0}" is unknown POSCAR option'.format(ctype))
     
     # Allocate storage for positions
     spos = np.zeros((len(symbols), 3))
@@ -76,7 +79,7 @@ def parse_poscar(filename):
     return cell, spos, symbols
     
     
-def parse_procar(filename):
+def parse_procar(filename, vasp_version):
     '''This function parses a PROCAR file. It returns a tuple
     consisting of following elements:
     
@@ -157,6 +160,7 @@ def parse_procar(filename):
         for k in xrange(dim):
             # Fetch entire orbital weight block
             data = np.fromfile(gl, sep=" ", count=nions*(norbs+2))
+            
             # Cast it into tabular shape
             data = data.reshape((nions, norbs+2))
             
@@ -170,25 +174,48 @@ def parse_procar(filename):
     if '+ phase' in header_1:
         # Allocate storage for phases
         phases = np.zeros((npoints, nions*norbs, nbands, 2), complex)
+        
+        if vasp_version < (5, 4, 4):
+            # Declare nested function that handles 
+            # parsing of complex weights
+            def get_weights(i, j, s):
+                # Read abs values of weights
+                get_absweights(i, j, s)
+                
+                # Skip line with orbital names
+                gl.readline()
+                
+                # Fetch entire phase block
+                data = np.fromfile(gl, sep=" ", count=2*nions*(norbs+1))
+                # Cast it into tabular shape
+                data = data.reshape((2*nions, norbs+1))
 
-        # Declare nested function that handles 
-        # parsing of complex weights
-        def get_weights(i, j, s):
-            # Read abs values of weights
-            get_absweights(i, j, s)
-            
-            # Skip line with orbital names
-            gl.readline()
-            
-            # Fetch entire phase block
-            data = np.fromfile(gl, sep=" ", count=2*nions*(norbs+1))
-            # Cast it into tabular shape
-            data = data.reshape((2*nions, norbs+1))
+                # Discard first column and store real and imaginary
+                # parts respectively
+                phases[i,:,j,s] =  data[::2,1:].flatten()
+                phases[i,:,j,s] += 1j*data[1::2,1:].flatten()
+        else:
+            # Declare nested function that handles 
+            # parsing of complex weights
+            def get_weights(i, j, s):
+                # Read abs values of weights
+                get_absweights(i, j, s)
+                
+                # Skip line with orbital names
+                gl.readline()
+                
+                # Fetch entire phase block
+                data = np.fromfile(gl, sep=" ", count=nions*(2*norbs+2))
+                # Cast it into tabular shape
+                data = data.reshape((nions, 2*norbs+2))
 
-            # Discard first column and store real and imaginary
-            # parts respectively
-            phases[i,:,j,s] =  data[::2,1:].flatten()
-            phases[i,:,j,s] += 1j*data[1::2,1:].flatten()
+                # Discard first column and store real and imaginary
+                # parts respectively
+                phases[i,:,j,s] =  data[:,1:-1:2].flatten()
+                phases[i,:,j,s] += 1j*data[:,2:-1:2].flatten()
+                
+                # Skip line with charges
+                gl.readline()
     else:
         # Phases are None in this case
         phases = None
@@ -210,7 +237,7 @@ def parse_procar(filename):
         for j in xrange(nbands):
             # Parse band energy
             band_line = gl.readline().split()
-
+            
             bands[i, j, 0] = float(band_line[4])
             occupancies[i, j, 0] = float(band_line[-1])
             

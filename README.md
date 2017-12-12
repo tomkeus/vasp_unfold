@@ -40,6 +40,7 @@ where the parameters are
 --eps            Numerical tolerance for position discrimination
 --all-irreps     Write all irreps from the unfolding
 --check-mapping  Verify if fractional translations map atoms one-to-one
+--vasp-version   Which version of VASP was used to produce the PROCAR file
 poscar           Location of POSCAR file
 procar           Location of PROCAR file
 ```

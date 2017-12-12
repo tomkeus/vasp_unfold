@@ -80,3 +80,12 @@ v1.33
 v1.34
 
 * Fixed bug with numpy fraction issues.
+
+  
+  December 12th 2017
+=============
+
+v1.4
+
+* Added handling of PROCAR files for VASP 5.4.4
+* Fixed problem where POSCARS with Selective Dynamics were not handled

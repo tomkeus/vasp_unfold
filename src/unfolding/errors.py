@@ -4,8 +4,8 @@
 #  FILE:    __errors__.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.32
-#  DATE:    Apr 25th 2017
+#  VERSION: 1.4
+#  DATE:    December 12th 2017
 #
 #===========================================================
 

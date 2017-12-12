@@ -7,8 +7,8 @@
 #  FILE:    __main__.py
 #  AUTHOR:  Milan Tomic
 #  EMAIL:   tomic@th.physik.uni-frankfurt.de
-#  VERSION: 1.32
-#  DATE:    Apr 25th 2017
+#  VERSION: 1.4
+#  DATE:    December 12th 2017
 #
 #
 # vasp_unfold is a code whose purpose is to perform the unfolding
@@ -26,7 +26,7 @@
 import numpy as np
 import argparse
 import sys
-from utils import post_error, translation
+from utils import post_error, translation, version
 from unfolding import build_translations, build_operators, build_projectors
 from parse import parse_poscar, parse_procar
 from write import write_procar
@@ -84,7 +84,11 @@ def main():
                         'one-to-one, ie. map every atom on exactly one other atom '
                         'in the unit cell. This MUST not be enabled for the cases '
                         'where vacancies or excess atoms are present.')
-                                                                     
+    
+    parser.add_argument('--vasp-version', type=version, default='5.2.2', help='Version of VASP'
+                        'that produced the PROCAR file. All versions prior to 5.4.4'
+                        'use the same format. Since 5.4.4 there is a new format.')
+                        
     args = parser.parse_args()
     
     tgens = args.tgen
@@ -95,19 +99,19 @@ def main():
         cell, spos, symbols = parse_poscar(args.poscar)
     except:
         post_error('Unable to parse the input POSCAR file. Please '
-            'check if the file exists and is formatted properly')
+            'check if the file exists and is formatted properly.', True)
     
     ops = build_operators(spos, trans, args.check_mapping, args.eps)
     
     try:
-        data = parse_procar(args.procar)
-    except:
-        post_error(errors.poscar_parse_error)
+        data = parse_procar(args.procar, args.vasp_version)
+    except Exception as exc:
+        post_error(errors.poscar_parse_error, True)
     
     if data[-1] is None:
         post_error('Phase information has to be present in the PROCAR '
-            'file. Please repeat the calculation with LORBIT=12.')
-
+            'file. Please repeat the calculation with LORBIT=12.', True)
+    
     phases = np.copy(data[-1])
     
     norbs = phases.shape[1]/len(spos)
