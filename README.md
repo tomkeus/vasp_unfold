@@ -6,7 +6,7 @@ You can use the code in whatever way you see fit, but if it is used to produce t
 
 In addition, a small utility called fatplot is provided to quickly plot the bandstructures contained in the VASPs PROCAR files.
 
-The code is given as is, ie. there is no guarantee that it will work. However, if you have some problems, or the code does not behave in a way you expect it to, I encourage you to report the problem to my [e-mail](mailto:tomic@itp.uni-frankfurt.de) and I will try to fix it as soon as possible.
+The code is given as is, ie. there is no guarantee that it will work. However, if you have some problems, or the code does not behave in a way you expect it to, I encourage you to report the problem to my [e-mail](mailto:tomkeus@gmail.com) and I will try to fix it as soon as possible.
 
 ## Installation
 
